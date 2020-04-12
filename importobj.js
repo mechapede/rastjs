@@ -1,6 +1,6 @@
 #!/usr/bin/node
 /* Imports an object and converts to the engine format for webgl 
-   Assumes model uses the right hand rule(Blender) and converts to left hand rule */
+   Assumes model uses the right hand rule(Blender) and clockwise vertex indexing*/
 const fs = require('fs');
 
 if( process.argv.length != 3  && process.argv.length != 4 ){
@@ -9,6 +9,8 @@ if( process.argv.length != 3  && process.argv.length != 4 ){
 }
 var name = "";
 var scale = 1;
+//var invert_index = true;
+
 var name_regex = /(\w+)\.obj/;
 
 var uv_warn = false;
@@ -56,11 +58,11 @@ fs.readFile(process.argv[2], 'ascii', function(err,contents) {
             //ignored
         }else if(line.match(regvert)){ //invert for directx
             var v = line.match(fpformat).map(x=>Number(x));
-            v[2] = -1.0*v[2]; //xxx
+            //v[2] = -1.0*v[2]; //xxx
             verts.push(...v);
         }else if(line.match(regnormal)){
             var n = line.match(fpformat).map(x=>Number(x));
-            n[2] = -1.0*n[2]; //xxx
+            //n[2] = -1.0*n[2]; //xxx
             normals.push(...n);
         }else if(line.match(reguv)){
             var u = line.match(fpformat).map(x=>Number(x));
@@ -71,18 +73,17 @@ fs.readFile(process.argv[2], 'ascii', function(err,contents) {
                 }
                 u.length = 2;
             }
-            u[1] = 1.0 - u[1]; //xxx
-            if( u[1] < 1.0 ) console.log("bar door");
+            //u[1] = 1.0 - u[1]; //xxx
             uvs.push(...u);
         }else if( line.match(regface) ){
             var p = line.match(indexformat).map(x=>x.split("/")).map(x=>x.map(y=>Number(y)));
             if(p.length == 4){
-                p = polyconvert(p);
+                p = polyconvert(p);//TODO: this is broken
             }else if(p.length != 3){
                 console.log("Polygon with " + p.length + " verts is not supported, line " + i + ". Skipping it");
                 continue;
             }
-            var tmp = p[0]; //xxxxxxxx
+            var tmp = p[0]; //xxx, CCW order please
             p[0] = p[2];
             p[2] = tmp;
             indeces.push(...p);
