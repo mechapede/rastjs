@@ -5,7 +5,7 @@ import { loadTexture, loadShaderProgram } from "/engine/shader.js";
 import * as engine from "/engine/gameloop.js"; //TODO relative imports for flexability
 import * as input from "/engine/input.js";
 import * as data from "/engine/data.js";
-import { GameObject, Material, Model, Script, Level } from "/engine/types.js";
+import { GameObject, Material, Model, Script, Level, RenderType } from "/engine/types.js";
 
 export function bootstrap(canvas_name,asset_path) {
   var canvas = getCanvas("game_canvas");
@@ -99,8 +99,8 @@ export function bootstrap(canvas_name,asset_path) {
         const numUniforms = glcontext.getProgramParameter(shader,glcontext.ACTIVE_UNIFORMS);
         for(let i = 0; i < numUniforms; i++) {
           const info = glcontext.getActiveUniform(shader, i);
-          if(info.type != glcontext.SAMPLER_2D && info.type != glcontext.SAMPLER_CUBE) {
-            if(["u_matrix","u_matrix_inverse","u_camera_pos","u_time"].includes(info.name)) {
+          if(info.type != glcontext.SAMPLER_2D && info.type != glcontext.SAMPLER_CUBE) { //TODO: move definitions to common place
+            if(["u_matrix","u_matrix_inverse","u_camera_pos","u_time","u_model_matrix","u_normal_matrix","u_light_pos"].includes(info.name)) {
               engine_uniforms[info.name] = i;
             } else if(info.name) {
               //TODO if in manifest then use it
@@ -119,18 +119,27 @@ export function bootstrap(canvas_name,asset_path) {
         var model = null;
         var material = null;
         var scripts = [];
+        var render_type = RenderType.NORMAL;
         if("model" in object_manifest) {
           model = data.getModel(object_manifest["model"]);
         }
         if("material" in object_manifest) {
           material = data.getMaterial(object_manifest["material"]);
         }
+        if("instanced" in object_manifest && object_manifest["instanced"]){
+          render_type = RenderType.INSTANCED;
+        }
+        
+        if("invisible" in object_manifest && object_manifest["invisible"]){
+          render_type = RenderType.INVISIBLE;
+        }
+        
         if("scripts" in object_manifest) {
           object_manifest["scripts"].forEach(function(name) {
             scripts.push(data.getScript(name));
           });
         }
-        var object = new GameObject(model,material,scripts);
+        var object = new GameObject(model,material,scripts,render_type);
         data.addObject(object_key,object);
       }
 

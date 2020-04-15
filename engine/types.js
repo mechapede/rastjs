@@ -4,15 +4,22 @@ import * as data from "/engine/data.js";
 import { vec3 } from "/engine/emath.js";
 
 export class GameObject {
-  constructor(model,material,scripts) {
+  constructor(model,material,scripts,render_type) {
     this.model = model;
     this.material = material;
     this.scripts = scripts;
+    this.render_type = render_type;
   }
 
   createInstance(id) {
     return new Instance(id,this.model, this.material,this.scripts);
   }
+}
+
+export var RenderType = {
+  INSTANCED: "instanced",
+  NORMAL: "normal",
+  INVISIBLE: "invisible"
 }
 
 export class Instance {

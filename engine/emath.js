@@ -55,6 +55,68 @@ export class vec4 {
   }
 }
 
+export class mat3 {
+  
+  static idenity(){
+      return new Float32Array([1,0,0,
+                             0,1,0,
+                             0,0,1]);  
+  }
+  
+  static transpose(mat3a){
+    return [mat3a[0], mat3a[3], mat3a[6],
+                 mat3a[1], mat3a[4], mat3a[7],
+                 mat3a[2], mat3a[5], mat3a[8] ];
+  }
+  
+  static inverse(mat3a){
+    var m = mat3a.slice(0,9);
+    var cm = this.idenity();
+    for(var i = 0; i<3; i++) {
+      var max_row = i; //pivot
+      for(var j = i+1; j <3; j++) {
+        if(Math.abs(m[max_row + i*3]) < Math.abs(m[j + i*3])) {
+          max_row = j;
+        }
+      }
+      for(var j=0; j <3; j++) {
+        var t = m[i + j*3];
+        m[i + j*3] = m[max_row +j*3];
+        m[max_row + j*3] = t;
+        t = cm[i + j*3];
+        cm[i+j*3] = cm[max_row + j*3];
+        cm[max_row +j*3] = t;
+      }
+      if(m[i+i*3] == 0) {
+        console.assert(false, {name:name, errorMsg:"Matrix inverse does not exist"});
+        return null;
+      }
+      for(var j = 0; j < 3; j++) {
+        if(m[j+i*3] == 0 || j == i) {
+          continue;
+        }
+        var row_factor = -m[j+i*3]/m[i+i*3];
+
+        for(var k = 0; k < 3; k++) {
+          m[j+k*3] += (row_factor * m[i+k*3]); //perform on m,cm matrix
+          cm[j+k*3] += (row_factor * cm[i+k*3]);
+        }
+        m[j+i*3] = 0;
+
+      }
+    }
+    for(var i = 0; i < 3; i++) { //normalize to idenity
+      for(var j =0; j < 3; j++) {
+        cm[i+j*3] /= m[i+i*3];
+
+      }
+      m[i+i*3] = 1;
+    }
+    return cm;
+  }
+  
+}
+
 export class mat4 {
   static perspective(fov,aspect, near, far) {
     var f = Math.tan(Math.PI * 0.5 - 0.5 *fov);
@@ -121,23 +183,6 @@ export class mat4 {
     var a31 = 2*(rotation[0]*rotation[2] - rotation[1]*rotation[3]);
     var a32 = 2*(rotation[0]*rotation[3] + rotation[1]*rotation[2]);
     var a33 = 1 - Math.pow(rotation[0],2) + Math.pow(rotation[1],2);
-    /*
-    var xc = Math.cos(rotation[0]);
-    var xs = Math.sin(rotation[0]);
-    var yc = Math.cos(rotation[1]);
-    var ys = Math.sin(rotation[1]);
-    var zc = Math.cos(rotation[2]);
-    var zs = Math.sin(rotation[2]);
-    var a11 = xc*yc;
-    var a12 = xc*ys*zs-xs*zc;
-    var a13 = xc*ys*zc+xs*zs;
-    var a21 = xs*yc;
-    var a22 = xs*ys*zs+xc*zc;
-    var a23 = xs*ys*zc-xc*zs;
-    var a31 = -ys;
-    var a32 = yc*zs;
-    var a33 = yc*zc;
-    */
     return new Float32Array([a11, a21, a31, 0,
                                   a12, a22, a32, 0,
                                   a13, a23, a33, 0,

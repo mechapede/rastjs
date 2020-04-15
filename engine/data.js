@@ -152,7 +152,7 @@ export function getTexture(name) {
 
 //creates instance, add error checking
 export function addInstance(obj_name) {
-  console.assert(obj_name in objects, {name:name, errorMsg:"Object does not exist! Instance not created."});
+  console.assert(obj_name in objects, {name:obj_name, errorMsg:"Object does not exist! Instance not created."});
   if(obj_name in objects) {
     var obj = objects[obj_name];
     var id = instance_id;
