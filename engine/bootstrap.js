@@ -97,11 +97,12 @@ export function bootstrap(canvas_name,asset_path) {
         var engine_uniforms = {};
         var uniforms = {};
         const numUniforms = glcontext.getProgramParameter(shader,glcontext.ACTIVE_UNIFORMS);
+        var texture_locations = []; //dirty hack
         for(let i = 0; i < numUniforms; i++) {
           const info = glcontext.getActiveUniform(shader, i);
           if(info.type != glcontext.SAMPLER_2D && info.type != glcontext.SAMPLER_CUBE) { //TODO: move definitions to common place
             if(["u_matrix","u_matrix_inverse","u_camera_pos","u_time","u_model_matrix","u_normal_matrix","u_light_pos"].includes(info.name)) {
-              engine_uniforms[info.name] = i;
+              engine_uniforms[info.name] = glcontext.getUniformLocation(shader,info.name);
             } else if(info.name) {
               //TODO if in manifest then use it
             } else {
@@ -109,7 +110,16 @@ export function bootstrap(canvas_name,asset_path) {
             }
           }
         }
+        var texture_locations = [];
+        for(var i = 0; i < textures.length; i++) {
+          var texture_location = glcontext.getUniformLocation(shader,"u_tex" + i); //TODO: remove these texture calls...
+          texture_locations.push(texture_location);
+        }
+        
         var material = new Material(shader,textures,engine_attributes,attributes, engine_uniforms, uniforms);
+        //TODO: dirty hack
+        material.texture_locations = texture_locations;
+        
         data.addMaterial(material_key,material);
       }
 

@@ -11,38 +11,60 @@
  * */
 
 export class vec2 {
-  static sub(vec2a, vec2b) {
-    return [vec2a[0]-vec2b[0],vec2a[1]-vec2b[1]]
+  static sub(vec2a, vec2b, dest) {
+    dest[0] = vec2a[0] - vec2b[0];
+    dest[1] = vec2a[1] - vec2b[1];
+    return dest;
   }
   static dot(vec2a,vec2b) {
     return vec2a[0]*vec2b[0] + vec2a[1]*vec2b[1];
   }
 }
 
+const vec3_temp = new Float32Array(3); //buffer
 export class vec3 {
-  static sub(vec3a, vec3b) {
-    return [vec3a[0]-vec3b[0],vec3a[1]-vec3b[1],vec3a[2]-vec3b[2]]
+  static sub(vec3a, vec3b, dest) {
+    dest[0] = vec3a[0]-vec3b[0];
+    dest[1] = vec3a[1]-vec3b[1];
+    dest[2] = vec3a[2]-vec3b[2];
+    return dest;
   }
 
-  static add(vec3a, vec3b) {
-    return [vec3a[0]+vec3b[0],vec3a[1]+vec3b[1],vec3a[2]+vec3b[2]]
+  static add(vec3a, vec3b, dest) {
+    dest[0] = vec3a[0] + vec3b[0];
+    dest[1] = vec3a[1] + vec3b[1];
+    dest[2] = vec3a[2] + vec3b[2];
+    return dest;
   }
 
   static dot(vec3a,vec3b) {
     return vec3a[0]*vec3b[0] + vec3a[1]*vec3b[1] + vec3a[2]*vec3b[2];
   }
 
-  static cross(vec3a,vec3b) {
-    return [ vec3b[1] * vec3a[2] - vec3b[2] * vec3a[1],
-                      -(vec3b[0] * vec3a[2] - vec3b[2] * vec3a[0]),
-                      vec3b[0] * vec3a[1] - vec3b[1] * vec3a[0],
-                      1];
+  static cross(vec3a, vec3b, dest) {
+    var inter = dest;
+    if(dest == vec3a || dest == vec3b) {
+      inter = vec3_temp; //use tmp buffer for result
+    }
+    inter[0] = vec3b[1] * vec3a[2] - vec3b[2] * vec3a[1];
+    inter[1] = -(vec3b[0] * vec3a[2] - vec3b[2] * vec3a[0]);
+    inter[2] = vec3b[0] * vec3a[1] - vec3b[1] * vec3a[0]
+
+    if(inter != dest) {
+      dest[0] = inter[0];
+      dest[1] = inter[1];
+      dest[2] = inter[2];
+    }
+    return dest;
   }
 
-  static normalize(vec3a) {
+  static normalize(vec3a, dest) {
     var length = Math.sqrt(Math.pow(vec3a[0],2) + Math.pow(vec3a[1],2) + Math.pow(vec3a[2],2));
-    if(length == 0) return [vec3a[0], vec3a[1], vec3a[2]];
-    return [vec3a[0]/length, vec3a[1]/length, vec3a[2]/length];
+    if(length == 0) length = 1;
+    dest[0] = vec3a[0] / length;
+    dest[1] = vec3a[1] / length;
+    dest[2] = vec3a[2] / length;
+    return dest;
   }
 }
 
@@ -55,23 +77,52 @@ export class vec4 {
   }
 }
 
+const mat3_tmp = new Float32Array(9);
 export class mat3 {
-  
-  static idenity(){
-      return new Float32Array([1,0,0,
-                             0,1,0,
-                             0,0,1]);  
+  static idenity(dest) {
+    dest[0] = 1;
+    dest[1] = 0;
+    dest[2] = 0;
+    dest[3] = 0;
+    dest[4] = 1;
+    dest[5] = 0;
+    dest[6] = 0;
+    dest[7] = 0;
+    dest[8] = 1;
+    return dest;
   }
-  
-  static transpose(mat3a){
-    return [mat3a[0], mat3a[3], mat3a[6],
-                 mat3a[1], mat3a[4], mat3a[7],
-                 mat3a[2], mat3a[5], mat3a[8] ];
+
+  static transpose(mat3a, dest) {
+    if(dest == mat3a) {
+      var c = dest[1];
+      dest[1] = mat3a[3];
+      dest[3] = c;
+      c = dest[2];
+      dest[2] = mat3a[6];
+      dest[6] = c;
+      c = dest[5];
+      dest[5] = mat3a[7];
+      dest[7] = c;
+    } else {
+      dest[0] = mat3a[0];
+      dest[1] = mat3a[3];
+      dest[2] = mat3a[6];
+      dest[3] = mat3a[1];
+      dest[4] = mat3a[4];
+      dest[5] = mat3a[7];
+      dest[6] = mat3a[2];
+      dest[7] = mat3a[5];
+      dest[8] = mat3a[8];
+    }
+    return dest;
   }
-  
-  static inverse(mat3a){
-    var m = mat3a.slice(0,9);
-    var cm = this.idenity();
+
+  static inverse(mat3a, dest) {
+    var m = mat3_tmp;
+    for(var i =0; i < 9; i++) {
+      m[i] = mat3a[i];
+    }
+    var cm = this.idenity(dest);
     for(var i = 0; i<3; i++) {
       var max_row = i; //pivot
       for(var j = i+1; j <3; j++) {
@@ -108,72 +159,183 @@ export class mat3 {
     for(var i = 0; i < 3; i++) { //normalize to idenity
       for(var j =0; j < 3; j++) {
         cm[i+j*3] /= m[i+i*3];
-
       }
       m[i+i*3] = 1;
     }
-    return cm;
+    return dest;
   }
-  
 }
 
+const mat4_tmp = new Float32Array(16);
+const mat4_tmp2 = new Float32Array(16);
 export class mat4 {
-  static perspective(fov,aspect, near, far) {
+  static perspective(fov, aspect, near, far, dest) {
     var f = Math.tan(Math.PI * 0.5 - 0.5 *fov);
     var rangeInv = 1.0 / (near - far);
-
-    return new Float32Array([f / aspect, 0, 0, 0,
-                               0, f, 0, 0,
-                               0, 0, -(near + far) * rangeInv, 1,
-                               0, 0, near * far * rangeInv * 2, 0]);
+    dest[0] = f/aspect;
+    dest[1] = 0;
+    dest[2] = 0;
+    dest[3] = 0;
+    dest[4] = 0;
+    dest[5] = f;
+    dest[6] = 0;
+    dest[7] = 0;
+    dest[8] = 0;
+    dest[9] = 0;
+    dest[10] = -(near + far) * rangeInv;
+    dest[11] = 1;
+    dest[12] = 0;
+    dest[13] = 0;
+    dest[14] = near * far * rangeInv * 2;
+    dest[15] = 0;
+    return dest
   }
 
-  static idenity() {
-    return new Float32Array([1,0,0,0,
-                             0,1,0,0,
-                             0,0,1,0,
-                             0,0,0,1]);
+  static idenity(dest) {
+    dest[0] = 1;
+    dest[1] = 0;
+    dest[2] = 0;
+    dest[3] = 0;
+    dest[4] = 0;
+    dest[5] = 1;
+    dest[6] = 0;
+    dest[7] = 0;
+    dest[8] = 0;
+    dest[9] = 0;
+    dest[10] = 1;
+    dest[11] = 0;
+    dest[12] = 0;
+    dest[13] = 0;
+    dest[14] = 0;
+    dest[15] = 1;
+    return dest;
   }
 
-  static translate(vec4) {
-    return new Float32Array([1,0,0,0,
-                             0,1,0,0,
-                             0,0,1,0,
-                             vec4[0],vec4[1],vec4[2],1]);
+  static translate(vec3a, dest) {
+    dest[0] = 1;
+    dest[1] = 0;
+    dest[2] = 0;
+    dest[3] = 0;
+    dest[4] = 0;
+    dest[5] = 1;
+    dest[6] = 0;
+    dest[7] = 0;
+    dest[8] = 0;
+    dest[9] = 0;
+    dest[10] = 1;
+    dest[11] = 0;
+    dest[12] = vec3a[0];
+    dest[13] = vec3a[1];
+    dest[14] = vec3a[2];
+    dest[15] = 1;
+    return dest;
   }
 
-  static xRotate(radians) {
+  static xRotate(radians, dest) {
     var c = Math.cos(radians);
     var s = Math.sin(radians);
-
-    return new Float32Array([1,0,0,0,
-                             0,c,s,0,
-                             0,-s,c,0,
-                             0,0,0,1]);
+    dest[0] = 1;
+    dest[1] = 0;
+    dest[2] = 0;
+    dest[3] = 0;
+    dest[4] = 0;
+    dest[5] = c;
+    dest[6] = s;
+    dest[7] = 0;
+    dest[8] = 0;
+    dest[9] = -s;
+    dest[10] = c;
+    dest[11] = 0;
+    dest[12] = 0;
+    dest[13] = 0;
+    dest[14] = 0;
+    dest[15] = 1;
+    return dest;
   }
 
-  static yRotate(radians) {
+  static yRotate(radians, dest) {
     var c = Math.cos(radians);
     var s = Math.sin(radians);
-
-    return new Float32Array([c,0,-s,0,
-                             0,1,0,0,
-                             s,0,c,0,
-                             0,0,0,1]);
+    dest[0] = c;
+    dest[1] = 0;
+    dest[2] = -s;
+    dest[3] = 0;
+    dest[4] = 0;
+    dest[5] = 1;
+    dest[6] = 0;
+    dest[7] = 0;
+    dest[8] = s;
+    dest[9] = 0;
+    dest[10] = c;
+    dest[11] = 0;
+    dest[12] = 0;
+    dest[13] = 0;
+    dest[14] = 0;
+    dest[15] = 1;
+    return dest;
   }
 
-  static zRotate(radians) {
+  static zRotate(radians, dest) {
     var c = Math.cos(radians);
     var s = Math.sin(radians);
-    return new Float32Array([c,s,0,0,
-                             -s,c,0,0,
-                             0,0,1,0,
-                             0,0,0,1]);
+    dest[0] = c;
+    dest[1] = s;
+    dest[2] = 0;
+    dest[3] = 0;
+    dest[4] = -s;
+    dest[5] = c;
+    dest[6] = 0;
+    dest[7] = 0;
+    dest[8] = 0;
+    dest[9] = 0;
+    dest[10] = 1;
+    dest[11] = 0;
+    dest[12] = 0;
+    dest[13] = 0;
+    dest[14] = 0;
+    dest[15] = 1;
+    return dest;
+  }
+  
+  //performs rotation and translation based on camera, rotation in radians
+  static allRotate(rotation, dest){
+    var xc = Math.cos(rotation[0]);
+    var xs = Math.sin(rotation[0]);
+    var yc = Math.cos(rotation[1]); //TODO:rotation prob flipped, fix it
+    var ys = Math.sin(rotation[1]);
+    var zc = Math.cos(rotation[2]);
+    var zs = Math.sin(rotation[2]);
+    var a11 = xc*yc;
+    var a12 = xc*ys*zs-xs*zc;
+    var a13 = xc*ys*zc+xs*zs;
+    var a21 = xs*yc;
+    var a22 = xs*ys*zs+xc*zc;
+    var a23 = xs*ys*zc-xc*zs;
+    var a31 = ys;
+    var a32 = yc*zs;
+    var a33 = yc*zc;
+    dest[0] = a11;
+    dest[1] = a21;
+    dest[2] = a31;
+    dest[3] = 0;
+    dest[4] = a12;
+    dest[5] = a22;
+    dest[6] = a32;
+    dest[7] = 0;
+    dest[8] = a13;
+    dest[9] = a23;
+    dest[10] = a33;
+    dest[11] = 0;
+    dest[12] = 0; 
+    dest[13] = 0;
+    dest[14] = 0;
+    dest[15] = 1;
+    return dest;
   }
 
   // performs ops for rotation and translation for instances
-  // precomputed into one matrix to save ops
-  static modelOp(rotation, position) {
+  // precomputed into one matrix to save ops, rotation in quaternions
+  static modelOp(rotation, position, dest) {
     var a11 = 1 - Math.pow(rotation[1],2) - Math.pow(rotation[2],2);
     var a12 = 2*(rotation[0]*rotation[1] - rotation[2]*rotation[3]);
     var a13 = 2*(rotation[0]*rotation[2] + rotation[1]*rotation[3]);
@@ -183,54 +345,105 @@ export class mat4 {
     var a31 = 2*(rotation[0]*rotation[2] - rotation[1]*rotation[3]);
     var a32 = 2*(rotation[0]*rotation[3] + rotation[1]*rotation[2]);
     var a33 = 1 - Math.pow(rotation[0],2) + Math.pow(rotation[1],2);
-    return new Float32Array([a11, a21, a31, 0,
-                                  a12, a22, a32, 0,
-                                  a13, a23, a33, 0,
-                                  position[0], position[1], position[2], 1]);
+    dest[0] = a11;
+    dest[1] = a21;
+    dest[2] = a31;
+    dest[3] = 0;
+    dest[4] = a12;
+    dest[5] = a22;
+    dest[6] = a32;
+    dest[7] = 0;
+    dest[8] = a13;
+    dest[9] = a23;
+    dest[10] = a33;
+    dest[11] = 0;
+    dest[12] = position[0];
+    dest[13] = position[1];
+    dest[14] = position[2];
+    dest[15] = 1;
+    return dest;
   }
 
-  static scale(vec4) {
-    return new Float32Array([vec4[0],0,0,0,
-                             0,vec4[1],0,0,
-                             0,0,vec4[2],0,
-                             0,0,0,1]);
+  static scale(vec3a, dest) {
+    dest[0] = vec3a[0];
+    dest[1] = 0;
+    dest[2] = 0;
+    dest[3] = 0;
+    dest[4] = 0;
+    dest[5] = vec3a[1];
+    dest[6] = 0;
+    dest[7] = 0;
+    dest[8] = 0;
+    dest[9] = 0;
+    dest[10] = vec3a[2];
+    dest[11] = 0;
+    dest[12] = 0;
+    dest[13] = 0;
+    dest[14] = 0;
+    dest[15] = 1;
+    return dest;
   }
-
-  static multiplyMat(...mat4s) {
-    var result = mat4s[0];
-    for(var m = 1; m < mat4s.length; m++) {
-      var buff = new Float32Array(16);
-      var next = mat4s[m];
-      for(var x=0; x<4; x++) {
-        for(var y=0; y < 4; y++) {
-          var sum = 0;
-          for(var j=0; j <4; j++) {
-            sum += result[y + 4*j] * next[x*4+j];
-          }
-          buff[y + 4*x] = sum;
-        }
-      }
-      result = buff;
+  
+  static multiplyMat(mat4a, mat4b, dest) {
+    var inter = dest;
+    if(dest == mat4a || dest == mat4b) {
+      inter = mat4_tmp;
     }
-    return result;
+    for(var x=0; x<4; x++) {
+      for(var y=0; y < 4; y++) {
+        var sum = 0;
+        for(var j=0; j <4; j++) {
+          sum += mat4a[y + 4*j] * mat4b[x*4+j];
+        }
+        inter[y + 4*x] = sum;
+      }
+    }
+    if(dest != inter) {
+      for(var i = 0; i < 16; i++) {
+        dest[i] = inter[i];
+      }
+    }
+    return dest;
   }
 
-  static multiplyVec(mat4,vec4) {
-    var result = [];
+  static multiplyMats(dest,...mat4s) { 
+    var result = mat4s[0];
+    for(var i = 1; i < mat4s.length; i++){
+      result = this.multiplyMat(result,mat4s[i],mat4_tmp2);
+    }
+    for(var i = 0; i < 16; i++){
+      dest[i] = result[i];
+    }
+    return dest;
+  }
+
+  static multiplyVec(mat4a, vec4a, dest) {
+    var inter = dest;
+    if(dest == vec4a){
+      inter = vec4_tmp;
+    }
     for(var y = 0; y < 4; y++) {
       var sum = 0;
       for(var j = 0; j < 4; j++) {
-        sum += mat4[y+4*j] * vec4[j];
+        sum += mat4a[y+4*j] * vec4a[j];
       }
-      result[y] = sum;
+      inter[y] = sum;
     }
-    return result;
+    if( dest != inter){
+      for(var i =0; i < 4; i++){
+        dest[i] = inter[i];
+      }
+    }
+    return dest;
   }
 
   //using Gauss–Jordan elimination with partial pivoting
-  static inverse(mat4a) {
-    var m = mat4a.slice(0,16);
-    var cm = this.idenity();
+  static inverse(mat4a, dest) {
+    var m = mat4_tmp;
+    for(var i =0; i < 16; i++) {
+      m[i] = mat4a[i];
+    }
+    var cm = this.idenity(dest);
     for(var i = 0; i<4; i++) {
       var max_row = i; //pivot
       for(var j = i+1; j <4; j++) {
@@ -274,12 +487,12 @@ export class mat4 {
     return cm;
   }
 
-  static log(mat4) {
+  static log(mat4a) {
     var out = ""
     for(var i = 0; i < 4; i++) {
       out += "["
       for(var j=0; j < 4; j++) {
-        out += " " + mat4[i + 4*j]
+        out += " " + mat4a[i + 4*j]
       }
       out += " ]\n";
     }
@@ -289,25 +502,25 @@ export class mat4 {
 
 /* For rotations of objects */
 export class quaternion {
-  static getRotaionBetweenVectors(vec3a, vec3b) {
-    var norm_u_v = Math.sqrt(vec3.dot(vec3a,vec3a) + vec3.dot(vec3b,vec3b));
-    var real_part = norm_u_v + vec3.dot(vec3a,vec3b);
+  static getRotaionBetweenVectors(vec3a, vec3b, dest) {
+    var norm_u_v = Math.sqrt(vec3.dot(vec3a,vec3a,new Float32Array(3)) + vec3.dot(vec3b,vec3b,new Float32Array(3)));
+    var real_part = norm_u_v + vec3.dot(vec3a,vec3b,new Float32Array(3));
     var w = null;
-    
-    if(real_part < 1e-6 * norm_u_v){
+
+    if(real_part < 1e-6 * norm_u_v) {
       real_part = 0;
-      if( Math.abs(vec3a[0]) > Math.abs(vec31[2]) ){
+      if(Math.abs(vec3a[0]) > Math.abs(vec31[2])) {
         w = [-vec3a[1],vec3a[0],0];
-      }else{
+      } else {
         w = [0,-vec3a[2],vec3a[1]];
       }
     } else {
-      w = vec3.cross(vec3a, vec3b);
+      w = vec3.cross(vec3a, vec3b,new Float32Array(3));
     }
     return quaternion.normalize([w[0],w[1],w[2],real_part]);
   }
 
-  static normalize(quat) {
+  static normalize(quat, dest) {
     var length = Math.sqrt(Math.pow(quat[0],2) + Math.pow(quat[1],2) + Math.pow(quat[2],2) + Math.pow(quat[3],2));
     if(length == 0) return [quat[0], quat[1], quat[2], quat[3]];
     return [quat[0]/length, quat[1]/length, quat[2]/length, quat[3]/length];

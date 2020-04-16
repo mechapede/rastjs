@@ -109,9 +109,9 @@ export class Model {
       var b = this.verts.slice(b_index*3,b_index*3+3);
       var c_index = this.indeces[i*3+2];
       var c = this.verts.slice(c_index*3,c_index*3+3);
-      var ac = vec3.sub(c,a);
-      var ab = vec3.sub(b,a);
-      var norm = vec3.cross(ab,ac);
+      var ac = vec3.sub(c,a,new Float32Array(3));
+      var ab = vec3.sub(b,a,new Float32Array(3));
+      var norm = vec3.cross(ab,ac,new Float32Array(3));
 
       normals[a_index*3] += norm[0];
       normals[a_index*3+1] += norm[1];

@@ -58,7 +58,7 @@ export function get_key(keycode){
 }
 
 
-//tells 
+//TODO: cleanup all keys
 export function frame_done(){
     mouse_x = 0;
     mouse_y = 0;

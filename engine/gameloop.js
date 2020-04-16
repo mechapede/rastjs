@@ -1,27 +1,25 @@
 /* Main Rendering Loop */
 import * as data from "/engine/data.js";
 import { get_key, get_mouse_x, get_mouse_y, frame_done } from "/engine/input.js";
-import { mat4, vec4, mat3 } from "/engine/emath.js";
+import { mat4, vec4, mat3, vec3 } from "/engine/emath.js";
 import { RenderType } from "/engine/types.js";
 
 var glcontext = null;
+var angle_extention = null;
 var run = false;
 var gameobject = null;
 var last_frame = null;
 
-//TODO: support multiple camera logic
-var camera_x_rotate = 0; //
-var camera_y_rotate = 0;
-var camera_z_rotate = 0;
-var camera_x = 1;
-var camera_y = 10;
-var camera_z = 1;
+var camera = {
+  position: new Float32Array(3),
+  rotation: new Float32Array(3) //TODO: could change to quaternions
+};
 
 var elapsed_time = 0;
 var ticks = 0;
 
 var lightpos = new Float32Array([0,100,0,1]);
-var lightcolor = [1,1,1];
+var lightcolor = new Float32Array([1,1,1]);
 //make camera one vector
 
 function mainloop(timestamp) {
@@ -40,45 +38,54 @@ function mainloop(timestamp) {
   glcontext.clearColor(1, 1, 1, 1);
   glcontext.clear(glcontext.COLOR_BUFFER_BIT | glcontext.DEPTH_BUFFER_BIT);
 
-  var direction_x = -Math.cos(camera_x_rotate) * Math.sin(camera_y_rotate);
-  var direction_y = Math.sin(camera_x_rotate);
-  var direction_z = Math.cos(camera_x_rotate) * Math.cos(camera_y_rotate);
+  var direction_x = -Math.cos(camera.rotation[0]) * Math.sin(camera.rotation[1]);
+  var direction_y = Math.sin(camera.rotation[0]);
+  var direction_z = Math.cos(camera.rotation[0]) * Math.cos(camera.rotation[1]);
   if(get_key("w")) {
-    camera_x += 10 * timedelta * direction_x;
-    camera_y += 10 * timedelta * direction_y;
-    camera_z += 10 * timedelta * direction_z;
+    camera.position[0] += 10 * timedelta * direction_x;
+    camera.position[1] += 10 * timedelta * direction_y;
+    camera.position[2] += 10 * timedelta * direction_z;
   } else if(get_key("s")) {
-    camera_x -= 10 * timedelta * direction_x;
-    camera_y -= 10 * timedelta * direction_y;
-    camera_z -= 10 * timedelta * direction_z;
+    camera.position[0] -= 10 * timedelta * direction_x;
+    camera.position[1] -= 10 * timedelta * direction_y;
+    camera.position[2] -= 10 * timedelta * direction_z;
   }
-  var right = vec4.cross([direction_x,direction_y,direction_z],[0,1,0]);
+  var right = vec3.cross([direction_x,direction_y,direction_z],[0,1,0],new Float32Array(3));
   if(get_key("a")) {
-    camera_x -= 10 * timedelta * right[0];
-    camera_y -= 10 * timedelta * right[1];
-    camera_z -= 10 * timedelta * right[2];
+    camera.position[0] -= 10 * timedelta * right[0];
+    camera.position[1] -= 10 * timedelta * right[1];
+    camera.position[2] -= 10 * timedelta * right[2];
   } else if(get_key("d")) {
-    camera_x += 10 * timedelta * right[0];
-    camera_y += 10 * timedelta * right[1];
-    camera_z += 10 * timedelta * right[2];
+    camera.position[0] += 10 * timedelta * right[0];
+    camera.position[1] += 10 * timedelta * right[1];
+    camera.position[2] += 10 * timedelta * right[2];
   }
-
   if(get_key("q")) {
-    camera_y += 10* timedelta ;
+    camera.position[1] += 10 * timedelta;
   }
 
-  camera_x_rotate -= get_mouse_y() / 720;
-  camera_y_rotate -= get_mouse_x() / 720;
-  frame_done(); //TODO: cleanup all keys
-
-  var camera_translation = mat4.translate([-camera_x,-camera_y,-camera_z]);
-  var camera_rotation = mat4.multiplyMat(mat4.zRotate(camera_z_rotate),mat4.xRotate(camera_x_rotate),mat4.yRotate(camera_y_rotate));
-  var camera_position = mat4.multiplyMat(camera_rotation,camera_translation);
+  camera.rotation[0] -= get_mouse_y() / 720;
+  camera.rotation[1] -= get_mouse_x() / 720;
+  frame_done();
+  
+  var camera_translation = mat4.translate([-camera.position[0],-camera.position[1],-camera.position[2]], new Float32Array(16));
+  var camera_rotation = mat4.multiplyMats(new Float32Array(16),mat4.zRotate(camera.rotation[2],new Float32Array(16)),mat4.xRotate(camera.rotation[0],new Float32Array(16)),mat4.yRotate(camera.rotation[1],new Float32Array(16)));
+  //mat4.allRotate(camera.rotation, new Float32Array(16));
+  var camera_position = mat4.multiplyMat(camera_rotation,camera_translation, new Float32Array(16));
   var aspect = glcontext.canvas.clientWidth / glcontext.canvas.clientHeight;
-  var camera_perspective = mat4.perspective((60 * Math.PI)/180, aspect, 0.01, 400);
-  var camera_matrix = mat4.multiplyMat(camera_perspective,camera_position);
-  var camera_matrix_inverse = mat4.inverse(mat4.multiplyMat(camera_perspective,camera_rotation)); //for skybox
-
+  var camera_perspective = mat4.perspective((60 * Math.PI)/180, aspect, 0.01, 400,new Float32Array(16));
+  var camera_matrix = mat4.multiplyMat(camera_perspective,camera_position, new Float32Array(16));
+  var camera_matrix_inverse = mat4.inverse(mat4.multiplyMat(camera_perspective,camera_rotation, new Float32Array(16)),new Float32Array(16)); //for skybox
+  
+  var light_pos = mat4.multiplyVec(camera_matrix,lightpos,new Float32Array(4));
+  
+  //shared buffers, to reduce memory allocations
+  var vec3_tmp = new Float32Array(3);
+  var vec4_tmp = new Float32Array(4);
+  var mat3_tmp = new Float32Array(9);
+  var mat4_tmp = new Float32Array(16);
+  var mat4_tmp2 = new Float32Array(16);
+  
   for(var object_instances of data.iterInstanceByObject) {
     var object_name = object_instances.name;
     var object = data.getObject(object_instances.name);
@@ -126,56 +133,57 @@ function mainloop(timestamp) {
     }
     function setupConstantUniforms(instance) {
       if("u_matrix_inverse" in instance.material.engine_uniforms) {
-        var uni_offset = glcontext.getUniformLocation(program,"u_matrix_inverse"); //TODO: do stuff
-        glcontext.uniformMatrix4fv(uni_offset,false, new Float32Array(camera_matrix_inverse));
+        var uni_inverse_offset = instance.material.engine_uniforms["u_matrix_inverse"];
+        glcontext.uniformMatrix4fv(uni_inverse_offset,false,camera_matrix_inverse);
       }
-      if("u_camera_pos" in instance.material.engine_uniforms) { //TODO: remove
-        var uni_camera_pos = glcontext.getUniformLocation(program,"u_camera_pos");
-        glcontext.uniform3fv(uni_camera_pos, new Float32Array([camera_x,camera_y,camera_z]));
+      if("u_camera_pos" in instance.material.engine_uniforms) { //should no longer be needed, deprecate
+        var uni_camera_pos = instance.material.engine_uniforms["u_camera_pos"];
+        glcontext.uniform3fv(uni_camera_pos, camera.position);
       }
-
-      if("u_light_pos" in instance.material.engine_uniforms) { //TODO: remove
-        var uni_light_pos = glcontext.getUniformLocation(program,"u_light_pos");
-        var result = mat4.multiplyVec(camera_matrix,lightpos);
-        glcontext.uniform3fv(uni_light_pos, new Float32Array(result.slice(0,3)));
+      if("u_light_pos" in instance.material.engine_uniforms) { 
+        var uni_light_pos = instance.material.engine_uniforms["u_light_pos"];
+        glcontext.uniform3fv(uni_light_pos, light_pos.slice(0,3));
       }
-
       if("u_time" in instance.material.engine_uniforms) {
-        var uni_time = glcontext.getUniformLocation(program,"u_time");
+        var uni_time = instance.material.engine_uniforms["u_time"];
         glcontext.uniform1f(uni_time,timestamp/1000.0);
       }
 
       for(var i = 0; i < instance.material.textures.length; i++) {
         var texture = instance.material.textures[i];
-        var texture_location = glcontext.getUniformLocation(program,"u_tex" + i);
-
+        var texture_location = instance.material.texture_locations[i];
         glcontext.activeTexture(glcontext.TEXTURE0+i);
         if(texture["type"] == "TEXTURE_2D") {
           glcontext.bindTexture(glcontext.TEXTURE_2D,texture["texture"]);
         } else {
           glcontext.bindTexture(glcontext.TEXTURE_CUBE_MAP,texture["texture"]);
         }
-
         glcontext.uniform1i(texture_location, i);
       }
 
     }
     function setupPositionUniforms(instance) {
-      var world_matrix = mat4.modelOp(instance.rotation, instance.position);
-      var all_matrix = mat4.multiplyMat(camera_matrix,world_matrix);
+      var world_matrix = mat4.modelOp(instance.rotation, instance.position,mat4_tmp);
+      var all_matrix = mat4.multiplyMat(camera_matrix,world_matrix, mat4_tmp2);
       if("u_matrix" in instance.material.engine_uniforms) {
-        var uni_offset = glcontext.getUniformLocation(program,"u_matrix");
-        glcontext.uniformMatrix4fv(uni_offset,false, new Float32Array(all_matrix));
+        var uni_offset = instance.material.engine_uniforms["u_matrix"];
+        glcontext.uniformMatrix4fv(uni_offset,false, all_matrix);
       }
 
       if("u_normal_matrix" in instance.material.engine_uniforms) {
-        var all_matrix_3by3 = [all_matrix[0], all_matrix[1], all_matrix[2],
-                                              all_matrix[4], all_matrix[5], all_matrix[6],
-                                              all_matrix[8], all_matrix[9], all_matrix[10]];
-        var normal_matrix = mat3.transpose(mat3.inverse(all_matrix_3by3));
-
-        var uni_offset = glcontext.getUniformLocation(program,"u_normal_matrix");
-        glcontext.uniformMatrix3fv(uni_offset,false, new Float32Array(normal_matrix));
+        var all_matrix_3by3 = mat3_tmp; //use all same buffer
+        all_matrix_3by3[0] = all_matrix[0];
+        all_matrix_3by3[1] = all_matrix[1];
+        all_matrix_3by3[2] = all_matrix[2]; 
+        all_matrix_3by3[3] = all_matrix[4];
+        all_matrix_3by3[4] = all_matrix[5];
+        all_matrix_3by3[5] = all_matrix[6];
+        all_matrix_3by3[6] = all_matrix[8];
+        all_matrix_3by3[7] = all_matrix[9];
+        all_matrix_3by3[8] = all_matrix[10];
+        var normal_matrix = mat3.transpose(mat3.inverse(all_matrix_3by3,all_matrix_3by3),all_matrix_3by3);
+        var uni_normal_offset = instance.material.engine_uniforms["u_normal_matrix"];
+        glcontext.uniformMatrix3fv(uni_normal_offset,false, normal_matrix);
       }
     }
 
@@ -187,7 +195,7 @@ function mainloop(timestamp) {
       setupConstantUniforms(first_instance); //for now, these do not change between
       for(var instance of object_instances) {
         instance.step();
-        if(instance.material && instance.model) {   //dynamic generated meshes
+        if(instance.material && instance.model) { //for dynamic generated meshes
           setupAttributes(instance);
           setupPositionUniforms(instance);
           var count = instance.model.indeces.length;
@@ -218,8 +226,6 @@ function mainloop(timestamp) {
       console.assert(false, {name:object_name,object:object, errorMsg:"Object does not have valid RenderType value."});
     }
   }
-  //var error = glcontext.getError();
-  //if(error) console.log(error); SLOWDOWN OF CALLS
 
   if(run) requestAnimationFrame(mainloop);
 }

@@ -19,11 +19,7 @@ var globals = {"canvas":
                false,
                "glcontext":
                false,
-               "u_matrix":
-               null,
-               "u_matrix_inverse":
-               null,
-               "u_camera_pos":
+               "camera_pos": //TODO add more camera proerties here
                null
               }
 
