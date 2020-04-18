@@ -18,7 +18,7 @@ var camera = {
 var elapsed_time = 0;
 var ticks = 0;
 
-var lightpos = new Float32Array([0,100,0,1]);
+var lightpos = new Float32Array([64,50,64,1]);
 var lightcolor = new Float32Array([1,1,1]);
 //make camera one vector
 
@@ -62,6 +62,8 @@ function mainloop(timestamp) {
   }
   if(get_key("q")) {
     camera.position[1] += 10 * timedelta;
+  }else if(get_key("e")) {
+    camera.position[1] -= 10 * timedelta;
   }
 
   camera.rotation[0] -= get_mouse_y() / 720;
@@ -86,7 +88,11 @@ function mainloop(timestamp) {
   var mat4_tmp = new Float32Array(16);
   var mat4_tmp2 = new Float32Array(16);
   
-  for(var object_instances of data.iterInstanceByObject) {
+  for( var new_instance of data.iterNewInstances ){
+    new_instance.start();
+  }
+  
+  for(var object_instances of data.iterInstanceByLayer) {
     var object_name = object_instances.name;
     var object = data.getObject(object_instances.name);
 

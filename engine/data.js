@@ -1,4 +1,4 @@
-//all internal data for gameengine
+/* Module that holds all game data in specialized structures for rendering */
 import { GameObject } from "/engine/types.js";
 
 var objects = {};
@@ -10,6 +10,7 @@ var textures = {};
 
 var levels = {};
 var instances = [];
+var new_instances = [];
 var instance_object_tree = {};  //stores instances organized by objects
 
 var instance_id = 0;
@@ -147,25 +148,35 @@ export function getTexture(name) {
 
 
 //creates instance, add error checking
-export function addInstance(obj_name) {
+export function addInstance(position, rotation, obj_name) {
   console.assert(obj_name in objects, {name:obj_name, errorMsg:"Object does not exist! Instance not created."});
   if(obj_name in objects) {
     var obj = objects[obj_name];
     var id = instance_id;
     instance_id++;
-    var instance = obj.createInstance(id);
-    instance.start();
+    var instance = obj.createInstance(position,rotation,id);
+    //instance start at next frame
     if(obj_name in instance_object_tree) {
       instance_object_tree[obj_name].push(instance);
     } else {
       instance_object_tree[obj_name] = [instance];
     }
     instances[id] = instance;
+    new_instances.push(instance);
     return id;
   }
   return null;
 }
 
+export const iterNewInstances = {
+  *[Symbol.iterator]() {
+    while(new_instances.length > 0) {
+      yield new_instances.pop();
+    }
+  }
+}
+
+//Iterator of object ids
 export const iterInstances = {
   [Symbol.iterator]() {
     let step = -1;
@@ -182,10 +193,11 @@ return { value: instances[step], done: false };
   }
 }
 
+//iterator by object type, no specific order
 export const iterInstanceByObject = {
   *[Symbol.iterator]() {
     for(var obj_type in instance_object_tree) {
-      var instance_list = instance_object_tree[obj_type]
+      var instance_list = instance_object_tree[obj_type];
       var list_iterator = {
 name:
         obj_type,
@@ -195,10 +207,47 @@ name:
             yield instance_list[index++]
           }
         }
-      }
+      };
       yield list_iterator;
     }
   }
 }
 
+//iterator by objects, based on layer attribute (default = 0)
+//TODO: for now is always dynamic sorted, but list is very small
+export const iterInstanceByLayer = {
+  *[Symbol.iterator]() {
+    var objects_types = Object.keys(instance_object_tree);
+    var object_pairs = [];
+    for(var obj_name of objects_types) {
+      var obj = objects[obj_name];
+      object_pairs.push([obj_name,obj]);
+    }
+    object_pairs.sort(compare_layers);
+    
+    for(var obj_pair of object_pairs) {
+      var instance_list = instance_object_tree[obj_pair[0]];
+      var list_iterator = {
+name:
+        obj_pair[0],
+        *[Symbol.iterator]() {
+          var index = 0;
+          while(index < instance_list.length) {
+            yield instance_list[index++]
+          }
+        }
+      };
+      yield list_iterator;
+    }
+  }
+}
 
+function compare_layers(a,b) {
+  if(a[1].layer < b[1].layer) {
+    return -1;
+  } else if(a[1].layer > b[1].layer) {
+    return 1;
+  } else {
+    return 0;
+  }
+}

@@ -130,6 +130,7 @@ export function bootstrap(canvas_name,asset_path) {
         var material = null;
         var scripts = [];
         var render_type = RenderType.NORMAL;
+        var layer = 0;
         if("model" in object_manifest) {
           model = data.getModel(object_manifest["model"]);
         }
@@ -139,17 +140,19 @@ export function bootstrap(canvas_name,asset_path) {
         if("instanced" in object_manifest && object_manifest["instanced"]){
           render_type = RenderType.INSTANCED;
         }
-        
         if("invisible" in object_manifest && object_manifest["invisible"]){
           render_type = RenderType.INVISIBLE;
         }
-        
         if("scripts" in object_manifest) {
           object_manifest["scripts"].forEach(function(name) {
             scripts.push(data.getScript(name));
           });
         }
-        var object = new GameObject(model,material,scripts,render_type);
+        if("layer" in object_manifest) {
+          layer = object_manifest["layer"];
+        }
+        
+        var object = new GameObject(model,material,scripts,render_type,layer);
         data.addObject(object_key,object);
       }
 
@@ -163,22 +166,8 @@ export function bootstrap(canvas_name,asset_path) {
       var level = data.getLevel("start");
       level.start();
 
-      console.log("I am a cow");
-      console.log(data.iterInstances);
-
-
       input.start();
       engine.start();
-
-      for(var iter of data.iterInstanceByObject) {
-        console.log(iter.name);
-        var cnt = 0;
-        for(var instance of iter) {
-          cnt++;
-        }
-        console.log("cnt: ",cnt);
-      }
-
     });
   });
 }

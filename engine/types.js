@@ -4,29 +4,30 @@ import * as data from "/engine/data.js";
 import { vec3 } from "/engine/emath.js";
 
 export class GameObject {
-  constructor(model,material,scripts,render_type) {
+  constructor(model,material,scripts,render_type,layer) {
     this.model = model;
     this.material = material;
     this.scripts = scripts;
     this.render_type = render_type;
+    this.layer = layer; //lowest drawn first
   }
 
-  createInstance(id) {
-    return new Instance(id,this.model, this.material,this.scripts);
+  createInstance(position,rotation, id) {
+    return new Instance(position, rotation, id, this.model, this.material,this.scripts);
   }
 }
 
 export var RenderType = {
-  INSTANCED: "instanced",
+  INSTANCED: "instanced", //share same mesh
   NORMAL: "normal",
-  INVISIBLE: "invisible"
+  INVISIBLE: "invisible" //will not be drawn
 }
 
 export class Instance {
-  constructor(id,model,material,scripts) {
+  constructor(position,rotation,id,model,material,scripts) {
     this.id = id;
-    this.position = new Float32Array([0,0,0,0]);
-    this.rotation = new Float32Array([0,0,0,1]); //quaternion
+    this.position = position; 
+    this.rotation = rotation; //quaternion, should be normalized (default 0 0 0 1)
     this.material = material;
     this.model = model;
     if(this.model) this.model.loadMemory();
@@ -56,12 +57,12 @@ export class Script {
     this.diff = null;
   }
 
-  //time since script was last called.... must be set by caller in mainloop, fix this up and review, time should be varriable
+  //time since script was last called.... must be set by caller in mainloop
   timeDelta() {
     return this.diff/1000; //make sure call returns same well step is running
   }
 
-  initStart() {
+  initStart() { //TODO: these times are broken, but unused
     this.start();
     this.last_call = performance.now()
 
@@ -204,7 +205,7 @@ export class Material {
   }
 
   loadMemory() {
-    //todo
+    //todo, not needed for now
   }
 
   purgeMemory() {
@@ -226,8 +227,8 @@ export class Level {
   }
 
   start() {
-    for(var i = 0; i < this.objects.length; i++) {
-      data.addInstance(this.objects[i]);
+    for(var i = 0; i < this.objects.length; i++) { //TODO: store position/rotation info level manifest
+      data.addInstance(new Float32Array(4), new Float32Array([0,0,0,1]), this.objects[i]); 
     }
   }
 }

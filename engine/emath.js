@@ -502,7 +502,7 @@ export class mat4 {
 
 /* For rotations of objects */
 export class quaternion {
-  static getRotaionBetweenVectors(vec3a, vec3b, dest) {
+  static getRotaionBetweenVectors(vec3a, vec3b, dest) { //TODO: use dest 
     var norm_u_v = Math.sqrt(vec3.dot(vec3a,vec3a,new Float32Array(3)) + vec3.dot(vec3b,vec3b,new Float32Array(3)));
     var real_part = norm_u_v + vec3.dot(vec3a,vec3b,new Float32Array(3));
     var w = null;
