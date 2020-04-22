@@ -1,7 +1,6 @@
 /* Template for all game objects to derive from */
-
-import * as data from "/engine/data.js";
-import { vec3 } from "/engine/emath.js";
+import * as data from "./data.js";
+import { vec3 } from "./emath.js";
 
 export class GameObject {
   constructor(model,material,scripts,render_type,layer) {

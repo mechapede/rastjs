@@ -1,5 +1,5 @@
 /* Module that holds all game data in specialized structures for rendering */
-import { GameObject } from "/engine/types.js";
+import { GameObject } from "./types.js";
 
 var objects = {};
 var materials = {};

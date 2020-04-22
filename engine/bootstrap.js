@@ -1,11 +1,11 @@
-/** Sets up canvas and loads in all asset game data **/
+/* Sets up canvas and loads in all asset game data */
+import { loadFiles } from "./utils.js";
+import { loadTexture, loadShaderProgram } from "./shader.js";
+import { GameObject, Material, Model, Script, Level, RenderType } from "./types.js";
+import * as engine from "./gameloop.js"; 
+import * as input from "./input.js";
+import * as data from "./data.js";
 
-import { loadFiles } from "/engine/utils.js";
-import { loadTexture, loadShaderProgram } from "/engine/shader.js";
-import * as engine from "/engine/gameloop.js"; //TODO relative imports for flexability
-import * as input from "/engine/input.js";
-import * as data from "/engine/data.js";
-import { GameObject, Material, Model, Script, Level, RenderType } from "/engine/types.js";
 
 export function bootstrap(canvas_name,asset_path) {
   var canvas = getCanvas("game_canvas");
@@ -117,7 +117,6 @@ export function bootstrap(canvas_name,asset_path) {
         }
         
         var material = new Material(shader,textures,engine_attributes,attributes, engine_uniforms, uniforms);
-        //TODO: dirty hack
         material.texture_locations = texture_locations;
         
         data.addMaterial(material_key,material);

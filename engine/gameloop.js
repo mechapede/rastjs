@@ -1,8 +1,8 @@
-/* Main Rendering Loop */
-import * as data from "/engine/data.js";
-import { get_key, get_mouse_x, get_mouse_y, frame_done } from "/engine/input.js";
-import { mat4, vec4, mat3, vec3 } from "/engine/emath.js";
-import { RenderType } from "/engine/types.js";
+/* Main Rendering Loop for engine */
+import { get_key, get_mouse_x, get_mouse_y, frame_done } from "./input.js";
+import { mat4, vec4, mat3, vec3 } from "./emath.js";
+import { RenderType } from "./types.js";
+import * as data from "./data.js";
 
 var glcontext = null;
 var angle_extention = null;
@@ -11,7 +11,7 @@ var gameobject = null;
 var last_frame = null;
 
 var camera = {
-  position: new Float32Array(3),
+  position: new Float32Array([64,10,64]),
   rotation: new Float32Array(3) //TODO: could change to quaternions
 };
 
@@ -20,7 +20,6 @@ var ticks = 0;
 
 var lightpos = new Float32Array([64,50,64,1]);
 var lightcolor = new Float32Array([1,1,1]);
-//make camera one vector
 
 function mainloop(timestamp) {
 

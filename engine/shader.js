@@ -1,5 +1,4 @@
 /* Helper Functions for loading and compiling shaders */
-
 var id = 1
 
 export function Shader(id,shader) {
@@ -98,8 +97,8 @@ export function loadTexture(gl,path, manifest) {
                 
                 const level = 0;
                 const internalFormat = gl.RGBA;
-                const width = 2048;
-                const height = 2048;
+                const width = 1024;//TODO: don't hardcode default sizes
+                const height = 1024;
                 const border = 0;
                 const srcFormat = gl.RGBA;
                 const srcType = gl.UNSIGNED_BYTE;
