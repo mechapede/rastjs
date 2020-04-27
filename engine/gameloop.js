@@ -36,20 +36,20 @@ function mainloop(timestamp) {
 
   glcontext.clearColor(1, 1, 1, 1);
   glcontext.clear(glcontext.COLOR_BUFFER_BIT | glcontext.DEPTH_BUFFER_BIT);
-
-  var direction_x = -Math.cos(camera.rotation[0]) * Math.sin(camera.rotation[1]);
-  var direction_y = Math.sin(camera.rotation[0]);
-  var direction_z = Math.cos(camera.rotation[0]) * Math.cos(camera.rotation[1]);
+  
+  var forward = new Float32Array([-Math.cos(camera.rotation[0]) * Math.sin(camera.rotation[1]),Math.sin(camera.rotation[0]),Math.cos(camera.rotation[0]) * Math.cos(camera.rotation[1])]);
+  forward = vec3.normalize(forward,forward);
   if(get_key("w")) {
-    camera.position[0] += 10 * timedelta * direction_x;
-    camera.position[1] += 10 * timedelta * direction_y;
-    camera.position[2] += 10 * timedelta * direction_z;
+    camera.position[0] += 10 * timedelta * forward[0];
+    camera.position[1] += 10 * timedelta * forward[1];
+    camera.position[2] += 10 * timedelta * forward[2];
   } else if(get_key("s")) {
-    camera.position[0] -= 10 * timedelta * direction_x;
-    camera.position[1] -= 10 * timedelta * direction_y;
-    camera.position[2] -= 10 * timedelta * direction_z;
+    camera.position[0] -= 10 * timedelta * forward[0];
+    camera.position[1] -= 10 * timedelta * forward[1];
+    camera.position[2] -= 10 * timedelta * forward[2];
   }
-  var right = vec3.cross([direction_x,direction_y,direction_z],[0,1,0],new Float32Array(3));
+  var right = vec3.cross(forward,[0,1,0],new Float32Array(3));
+  var right = vec3.normalize(right,right);
   if(get_key("a")) {
     camera.position[0] -= 10 * timedelta * right[0];
     camera.position[1] -= 10 * timedelta * right[1];
@@ -67,11 +67,13 @@ function mainloop(timestamp) {
 
   camera.rotation[0] -= get_mouse_y() / 720;
   camera.rotation[1] -= get_mouse_x() / 720;
+  camera.rotation[0] =  Math.min(Math.max(camera.rotation[0],-Math.PI/2 + 0.0001),Math.PI/2 - 0.0001); //prevent flipped camera
+  camera.rotation[1] %= 2*Math.PI;
   frame_done();
   
   var camera_translation = mat4.translate([-camera.position[0],-camera.position[1],-camera.position[2]], new Float32Array(16));
-  var camera_rotation = mat4.multiplyMats(new Float32Array(16),mat4.zRotate(camera.rotation[2],new Float32Array(16)),mat4.xRotate(camera.rotation[0],new Float32Array(16)),mat4.yRotate(camera.rotation[1],new Float32Array(16)));
-  //mat4.allRotate(camera.rotation, new Float32Array(16));
+  var camera_rotation = mat4.multiplyMats(new Float32Array(16),mat4.xRotate(camera.rotation[0],new Float32Array(16)),mat4.yRotate(camera.rotation[1],new Float32Array(16)));
+  //TODO: make camera rotation pre-computed matrix
   var camera_position = mat4.multiplyMat(camera_rotation,camera_translation, new Float32Array(16));
   var aspect = glcontext.canvas.clientWidth / glcontext.canvas.clientHeight;
   var camera_perspective = mat4.perspective((60 * Math.PI)/180, aspect, 0.01, 400,new Float32Array(16));

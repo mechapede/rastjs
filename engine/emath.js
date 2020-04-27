@@ -116,8 +116,25 @@ export class mat3 {
     }
     return dest;
   }
+  
+  static determinant(mat3a){
+    var asum = mat3a[0]*(mat3a[4]*mat3a[8]-mat3a[5]*mat3a[7]);
+    var bsum = mat3a[3]*(mat3a[1]*mat3a[8]-mat3a[2]*mat3a[7]);
+    var csum = mat3a[6]*(mat3a[1]*mat3a[5]-mat3a[2]*mat3a[4]);
+    return asum - bsum + csum;
+  }
+  
+  //inverse using determinants, has no sanity
+  static inverse(mat3a, dest){
+    var deter = this.determinant(mat3a);
+    console.assert(deter!=0, {name:name, errorMsg:"Matrix inverse does not exist"});
+    var trans = this.transpose(mat3a,mat3_tmp);
+    var inv = this.multiplyScaler(trans,1/deter,dest);
+    return inv;
+  }
 
-  static inverse(mat3a, dest) {
+  //inverse based on Gauss–Jordan elimination with partial pivoting
+  static inverse_looped(mat3a, dest) {
     var m = mat3_tmp;
     for(var i =0; i < 9; i++) {
       m[i] = mat3a[i];
@@ -161,6 +178,13 @@ export class mat3 {
         cm[i+j*3] /= m[i+i*3];
       }
       m[i+i*3] = 1;
+    }
+    return dest;
+  }
+  
+  static multiplyScaler(mat3a,scaler,dest){
+    for(var i=0; i<9; i++){
+      dest[i] = mat3a[i]*scaler;
     }
     return dest;
   }
@@ -297,23 +321,24 @@ export class mat4 {
     return dest;
   }
   
-  //performs rotation and translation based on camera, rotation in radians
+  //performs rotation and based on camera, rotation in radians
+  // xaxis, yaxis, axis rotation order
   static allRotate(rotation, dest){
     var xc = Math.cos(rotation[0]);
     var xs = Math.sin(rotation[0]);
-    var yc = Math.cos(rotation[1]); //TODO:rotation prob flipped, fix it
+    var yc = Math.cos(rotation[1]); 
     var ys = Math.sin(rotation[1]);
     var zc = Math.cos(rotation[2]);
     var zs = Math.sin(rotation[2]);
-    var a11 = xc*yc;
-    var a12 = xc*ys*zs-xs*zc;
-    var a13 = xc*ys*zc+xs*zs;
-    var a21 = xs*yc;
-    var a22 = xs*ys*zs+xc*zc;
-    var a23 = xs*ys*zc-xc*zs;
-    var a31 = ys;
-    var a32 = yc*zs;
-    var a33 = yc*zc;
+    var a11 = zc*yc;
+    var a12 = zc*ys*xs-zs*xc;
+    var a13 = zc*ys*xc+zs*xs;
+    var a21 = zs*yc;
+    var a22 = zs*ys*xs+zc*xc;
+    var a23 = zs*ys*xc-zc*xs;
+    var a31 = -ys;
+    var a32 = yc*xs;
+    var a33 = yc*xc;
     dest[0] = a11;
     dest[1] = a21;
     dest[2] = a31;
