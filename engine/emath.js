@@ -124,8 +124,8 @@ export class mat3 {
     return asum - bsum + csum;
   }
   
-  //inverse using determinants, has no sanity
-  static inverse(mat3a, dest){
+  //inverse using determinants
+  static inverse_det(mat3a, dest){
     var deter = this.determinant(mat3a);
     console.assert(deter!=0, {name:name, errorMsg:"Matrix inverse does not exist"});
     var trans = this.transpose(mat3a,mat3_tmp);
@@ -134,7 +134,7 @@ export class mat3 {
   }
 
   //inverse based on Gauss–Jordan elimination with partial pivoting
-  static inverse_looped(mat3a, dest) {
+  static inverse(mat3a, dest) {
     var m = mat3_tmp;
     for(var i =0; i < 9; i++) {
       m[i] = mat3a[i];
@@ -528,8 +528,8 @@ export class mat4 {
 /* For rotations of objects */
 export class quaternion {
   static getRotaionBetweenVectors(vec3a, vec3b, dest) { //TODO: use dest 
-    var norm_u_v = Math.sqrt(vec3.dot(vec3a,vec3a,new Float32Array(3)) + vec3.dot(vec3b,vec3b,new Float32Array(3)));
-    var real_part = norm_u_v + vec3.dot(vec3a,vec3b,new Float32Array(3));
+    var norm_u_v = Math.sqrt(vec3.dot(vec3a,vec3a) + vec3.dot(vec3b,vec3b));
+    var real_part = norm_u_v + vec3.dot(vec3a,vec3b);
     var w = null;
 
     if(real_part < 1e-6 * norm_u_v) {
@@ -540,7 +540,7 @@ export class quaternion {
         w = [0,-vec3a[2],vec3a[1]];
       }
     } else {
-      w = vec3.cross(vec3a, vec3b,new Float32Array(3));
+      w = vec3.cross(vec3b, vec3a,new Float32Array(3));
     }
     return quaternion.normalize([w[0],w[1],w[2],real_part]);
   }
