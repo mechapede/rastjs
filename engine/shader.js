@@ -1,20 +1,11 @@
 /* Helper Functions for loading and compiling shaders */
-var id = 1
 
-export function Shader(id,shader) {
-    this.id = id;
-    this.shader = shader
-}
-
-/* */
+/*Creates shader */
 export function loadShaderProgram(gl, vertex_file, frag_file ) {
-
     // Load files and build program
     const vertex_shader = loadShader(gl, gl.VERTEX_SHADER, vertex_file);
     const fragment_shader = loadShader(gl,gl.FRAGMENT_SHADER, frag_file);
-
     const shader_program = gl.createProgram();
-
     gl.attachShader(shader_program, vertex_shader);
     gl.attachShader(shader_program, fragment_shader);
     gl.linkProgram(shader_program);
@@ -97,7 +88,7 @@ export function loadTexture(gl,path, manifest) {
                 
                 const level = 0;
                 const internalFormat = gl.RGBA;
-                const width = 1024;//TODO: don't hardcode default sizes
+                const width = 1024;//TODO: don't hardcode default sizes, specify in manifest
                 const height = 1024;
                 const border = 0;
                 const srcFormat = gl.RGBA;

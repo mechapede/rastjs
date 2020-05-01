@@ -11,17 +11,11 @@ export function bootstrap(canvas_name,asset_path) {
   var canvas = getCanvas("game_canvas");
   var glcontext = getWebglContext(canvas);
   data.setGlobal("canvas",canvas);
-  data.setGlobal("glcontext",glcontext);
+  data.setGlobal("glcontext",glcontext);  
+  data.resizeCanvas();
 
-  var cwidth = canvas.clientWidth;
-  var cheight = canvas.clientHeight;
-
-  //TODO: dynamic resize... support
-  if(canvas.width != cwidth || canvas.height != cheight) {
-    canvas.width = cwidth;
-    canvas.height = cheight;
-  }
   //TODO button presses and other varriable input
+  //TODO: loading bar
   glcontext.enable(glcontext.CULL_FACE);
   glcontext.viewport(0,0, glcontext.canvas.width, glcontext.canvas.height);
   glcontext.blendFunc(glcontext.SRC_ALPHA, glcontext.ONE_MINUS_SRC_ALPHA);
@@ -43,16 +37,16 @@ export function bootstrap(canvas_name,asset_path) {
     var models = manifest["models"];
     models.forEach(model_name=> {
       promises.push(loadFiles([asset_path + "models/" + model_name + ".mdl"]).then(files=> {
-        var mmodel_manifest = JSON.parse(files[0]);
+        var model_manifest = JSON.parse(files[0]);
         var normals = null;
         var uvs = null;
-        var indeces = mmodel_manifest['indeces'].map(Number);
-        var verts = mmodel_manifest["verts"].map(Number);
-        if("normals" in mmodel_manifest) {
-          normals = mmodel_manifest["normals"].map(Number);
+        var indeces =  new Uint16Array(model_manifest['indeces'].map(Number));
+        var verts = new Float32Array(model_manifest["verts"].map(Number));
+        if("normals" in model_manifest) {
+          normals = new Float32Array(model_manifest["normals"].map(Number));
         }
-        if("uvs" in mmodel_manifest) {
-          uvs = mmodel_manifest["uvs"].map(Number);
+        if("uvs" in model_manifest) {
+          uvs = new Float32Array(model_manifest["uvs"].map(Number));
         }
         var model = new Model(verts,indeces,normals,uvs);
         data.addModel(model_name,model)
@@ -74,6 +68,7 @@ export function bootstrap(canvas_name,asset_path) {
 
     Promise.all(promises).then(()=> {
       var material_manifests = manifest["materials"];
+      var empty_buff = glcontext.createBuffer();; //to prevent warnings for unbound buffers
       for(var material_key in material_manifests) {
         var material_manifest = material_manifests[material_key];
         var textures = [];
@@ -84,10 +79,14 @@ export function bootstrap(canvas_name,asset_path) {
         var engine_attributes = {};
         var attributes = {}; //TODO
         const numAttribs = glcontext.getProgramParameter(shader,glcontext.ACTIVE_ATTRIBUTES);
+        
         for(let i = 0; i < numAttribs; ++i) {
           const info = glcontext.getActiveAttrib(shader, i);
           if(["a_position","a_uv","a_normal"].includes(info.name)) {
             engine_attributes[info.name] = i;
+            glcontext.enableVertexAttribArray(i); //enable all attributes, bind to empty to prevent warnings
+            glcontext.bindBuffer(glcontext.ARRAY_BUFFER,empty_buff);
+            glcontext.vertexAttribPointer(i,3,glcontext.FLOAT,0,0,0);
           } else if(info.name) {
             //TODO if in manifest then use it, custom parameters
           } else {

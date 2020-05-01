@@ -1,5 +1,5 @@
 /* Module that holds all game data in specialized structures for rendering */
-import { GameObject } from "./types.js";
+import { GameObject, Instance, RenderType } from "./types.js";
 
 var objects = {};
 var materials = {};
@@ -11,7 +11,8 @@ var textures = {};
 var levels = {};
 var instances = [];
 var new_instances = [];
-var instance_object_tree = {};  //stores instances organized by objects
+var instance_object_tree = {}; //stores instances organized by objects
+var baked_instances = [];
 
 var instance_id = 0;
 
@@ -23,6 +24,20 @@ var globals = {"canvas":
                "camera_pos": //TODO add more camera proerties here
                null
               }
+
+export function resizeCanvas() {
+  var canvas = globals["canvas"];
+  var cwidth = canvas.clientWidth;
+  var cheight = canvas.clientHeight;
+  if(canvas.width != cwidth || canvas.height != cheight) {
+    canvas.width = cwidth;
+    canvas.height = cheight;
+
+    console.log("Dimensions");
+    console.log(cwidth);
+    console.log(cheight);
+  }
+}
 
 export function getGlobal(name) {
   console.assert(name in globals, {name:name, errorMsg:"Key is not in globals!"});
@@ -146,8 +161,6 @@ export function getTexture(name) {
   return undefined;
 }
 
-
-//creates instance, add error checking
 export function addInstance(position, rotation, obj_name) {
   console.assert(obj_name in objects, {name:obj_name, errorMsg:"Object does not exist! Instance not created."});
   if(obj_name in objects) {
@@ -168,6 +181,30 @@ export function addInstance(position, rotation, obj_name) {
   return null;
 }
 
+export function addBakedInstances(position, rotation, obj_name, models) {
+  console.assert(obj_name in objects, {name:obj_name, errorMsg:"Object does not exist! Instance not created."});
+  if(obj_name in objects) {
+    var obj = objects[obj_name];
+    var proxy_obj_name = obj_name + "-static";
+    if(!(proxy_obj_name in objects)){ //proxy fix for objects that are instanced
+      var proxy_obj = new GameObject(null,obj.material,null,RenderType.NORMAL,obj.layer);
+      addObject(proxy_obj_name, proxy_obj);
+    }
+    var id = instance_id;
+    instance_id++;
+    var instance = new Instance(position, rotation, id, models, obj.material);
+    if(proxy_obj_name in instance_object_tree) {
+      instance_object_tree[proxy_obj_name].push(instance);
+    } else {
+      instance_object_tree[proxy_obj_name] = [instance];
+    }
+    instances[id] = instance;
+    return id;
+  }
+  return null;
+}
+
+//Instances initialized at next frame
 export const iterNewInstances = {
   *[Symbol.iterator]() {
     while(new_instances.length > 0) {
@@ -213,7 +250,7 @@ name:
   }
 }
 
-//iterator by objects, based on layer attribute (default = 0)
+//Iterate Instances by Object Layer
 //TODO: for now is always dynamic sorted, but list is very small
 export const iterInstanceByLayer = {
   *[Symbol.iterator]() {
@@ -224,7 +261,7 @@ export const iterInstanceByLayer = {
       object_pairs.push([obj_name,obj]);
     }
     object_pairs.sort(compare_layers);
-    
+
     for(var obj_pair of object_pairs) {
       var instance_list = instance_object_tree[obj_pair[0]];
       var list_iterator = {
@@ -241,6 +278,24 @@ name:
     }
   }
 }
+
+//Iterator of object ids
+export const iterBakedInstances = {
+  [Symbol.iterator]() {
+    let step = -1;
+    const iterator = {
+      next() {
+        step++;
+        if(step < baked_instances.length) {
+return { value: baked_instances[step], done: false };
+        }
+        return { value: undefined, done:true };
+      }
+    }
+    return iterator;
+  }
+}
+
 
 function compare_layers(a,b) {
   if(a[1].layer < b[1].layer) {

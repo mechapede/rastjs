@@ -8,7 +8,6 @@ var mouse_y = 0;
 
 
 export function start(canvas){
-    
     var canvas = data.getGlobal("canvas");
     var mouse_locked = 0;
     

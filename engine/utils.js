@@ -2,7 +2,6 @@
 
 //TODO: add error checking
 export async function loadFiles(paths) {
-
     var file_downloads = []
     paths.forEach( function(path) {
         file_downloads.push(
@@ -15,7 +14,6 @@ export async function loadFiles(paths) {
 }
 
 export async function loadFile(path) {
-
     return fetch(path).then(function(response) {
         return response.text()
     })

@@ -21,7 +21,7 @@ export class vec2 {
   }
 }
 
-const vec3_temp = new Float32Array(3); //buffer
+const vec3_tmp = new Float32Array(3); //buffer
 export class vec3 {
   static sub(vec3a, vec3b, dest) {
     dest[0] = vec3a[0]-vec3b[0];
@@ -44,7 +44,7 @@ export class vec3 {
   static cross(vec3a, vec3b, dest) {
     var inter = dest;
     if(dest == vec3a || dest == vec3b) {
-      inter = vec3_temp; //use tmp buffer for result
+      inter = vec3_tmp; //use tmp buffer for result
     }
     inter[0] = vec3b[1] * vec3a[2] - vec3b[2] * vec3a[1];
     inter[1] = -(vec3b[0] * vec3a[2] - vec3b[2] * vec3a[0]);
@@ -68,6 +68,7 @@ export class vec3 {
   }
 }
 
+const vec4_tmp = new Float32Array(4);
 export class vec4 {
   static cross(vec4a,vec4b) {
     return [ vec4b[1] * vec4a[2] - vec4b[2] * vec4a[1],
@@ -185,6 +186,26 @@ export class mat3 {
   static multiplyScaler(mat3a,scaler,dest){
     for(var i=0; i<9; i++){
       dest[i] = mat3a[i]*scaler;
+    }
+    return dest;
+  }
+
+  static multiplyVec(mat3a, vec3a, dest) {
+    var inter = dest;
+    if(dest == vec3a){
+      inter = vec3_tmp;
+    }
+    for(var y = 0; y < 3; y++) {
+      var sum = 0;
+      for(var j = 0; j < 3; j++) {
+        sum += mat3a[y+3*j] * vec3a[j];
+      }
+      inter[y] = sum;
+    }
+    if( dest != inter){
+      for(var i =0; i < 3; i++){
+        dest[i] = inter[i];
+      }
     }
     return dest;
   }
@@ -526,28 +547,56 @@ export class mat4 {
 }
 
 /* For rotations of objects */
+const quat_tmp = new Float32Array(4);
 export class quaternion {
-  static getRotaionBetweenVectors(vec3a, vec3b, dest) { //TODO: use dest 
+  static getRotaionBetweenVectors(vec3a, vec3b, dest) { 
     var norm_u_v = Math.sqrt(vec3.dot(vec3a,vec3a) + vec3.dot(vec3b,vec3b));
     var real_part = norm_u_v + vec3.dot(vec3a,vec3b);
-    var w = null;
-
+    var w = dest;
     if(real_part < 1e-6 * norm_u_v) {
       real_part = 0;
       if(Math.abs(vec3a[0]) > Math.abs(vec31[2])) {
-        w = [-vec3a[1],vec3a[0],0];
+        var c = vec3a[0];
+        w[0] = -vec3a[1];
+        w[1] = c;
+        w[2] = 0;
       } else {
-        w = [0,-vec3a[2],vec3a[1]];
+        var c = vec3a[1];
+        w[0] = 0;
+        w[1] = -vec3a[2];
+        w[2] = c;
       }
     } else {
-      w = vec3.cross(vec3b, vec3a,new Float32Array(3));
+      w = vec3.cross(vec3b, vec3a,dest);
     }
-    return quaternion.normalize([w[0],w[1],w[2],real_part]);
+    w[3] = real_part;
+    return quaternion.normalize(w,w);
   }
 
   static normalize(quat, dest) {
     var length = Math.sqrt(Math.pow(quat[0],2) + Math.pow(quat[1],2) + Math.pow(quat[2],2) + Math.pow(quat[3],2));
-    if(length == 0) return [quat[0], quat[1], quat[2], quat[3]];
-    return [quat[0]/length, quat[1]/length, quat[2]/length, quat[3]/length];
+    dest[0] = quat[0]/length;
+    dest[1] = quat[1]/length;
+    dest[2] = quat[2]/length;
+    dest[3] = quat[3]/length;
+    return dest;
+  }
+  
+  static multiply(quat1, quat2, dest){
+    var buff = dest;
+    if(buff == quat1 || buff == quat2){
+      buff = quat_tmp;
+    }
+    buff[0] = quat1[3]*quat2[0] + quat1[0]*quat2[3] + quat1[1]*quat2[2] - quat1[2]*quat2[1];
+    buff[1] = quat1[3]*quat2[1] - quat1[0]*quat2[2] + quat1[1]*quat2[3] + quat1[2]*quat2[0];
+    buff[2] = quat1[3]*quat2[2] + quat1[0]*quat2[1] - quat1[1]*quat2[0] + quat1[2]*quat2[3];
+    buff[3] = quat1[3]*quat2[3] - quat1[0]*quat2[0] - quat1[1]*quat2[1] - quat1[2]*quat2[2];
+    if(buff != dest){
+      dest[0] = buff[0];
+      dest[1] = buff[1];
+      dest[2] = buff[2];
+      dest[3] = buff[3];
+    }
+    return dest;
   }
 }

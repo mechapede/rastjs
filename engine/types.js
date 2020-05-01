@@ -1,7 +1,8 @@
 /* Template for all game objects to derive from */
 import * as data from "./data.js";
-import { vec3 } from "./emath.js";
+import { vec3, vec4, mat3, mat4 } from "./emath.js";
 
+//template to create game instances
 export class GameObject {
   constructor(model,material,scripts,render_type,layer) {
     this.model = model;
@@ -12,29 +13,38 @@ export class GameObject {
   }
 
   createInstance(position,rotation, id) {
-    return new Instance(position, rotation, id, this.model, this.material,this.scripts);
+    var models = null;
+    if(this.model) models = [this.model];
+    return new Instance(position, rotation, id, models, this.material,this.scripts);
   }
 }
 
 export var RenderType = {
-  INSTANCED: "instanced", //share same mesh
-  NORMAL: "normal",
-  INVISIBLE: "invisible" //will not be drawn
+INSTANCED: "instanced", 
+NORMAL: "normal",
+INVISIBLE: "invisible"
 }
 
+//must have an object parent for tenderer
 export class Instance {
-  constructor(position,rotation,id,model,material,scripts) {
+  constructor(position,rotation,id,models,material,scripts) {
     this.id = id;
-    this.position = position; 
+    this.position = position;
     this.rotation = rotation; //quaternion, should be normalized (default 0 0 0 1)
     this.material = material;
-    this.model = model;
-    if(this.model) this.model.loadMemory();
+    this.models = models;
+    if(this.models){
+      for(var model of this.models){
+        model.loadMemory(); //TODO: this call can be redundant
+      }
+    }
     this.scripts = []
-    scripts.forEach(function(script) {
-      script = new script(this);
-      this.scripts.push(script);
-    },this);
+    if(scripts){
+      scripts.forEach(function(script) {
+        script = new script(this);
+        this.scripts.push(script);
+      },this);
+    }
   }
 
   start() {
@@ -50,34 +60,115 @@ export class Instance {
   }
 }
 
+//For static instances, baked with rotation and position
+export class InstanceBaker {
+  constructor(position, rotation, obj_name) { //origin offset
+    this.position = position;
+    this.rotation = rotation;
+    this.obj_name = obj_name;
+    this.instances = [];
+  }
+
+  addInstance(position, rotation) {
+    this.instances.push([position,rotation]);
+  }
+  
+  //bake instances into large meshes based on positions, rotations
+  bake() {
+    var obj = data.getObject(this.obj_name);
+    var models = []; //models for rendering shapes, may be split over multiple draw calls
+    var instance_verts = obj.model.verts.length/3;
+    var instance_indeces = obj.model.indeces.length;
+    var max_buff_verts = 65535; // multiple of 3 for triangles
+    var max_buff_instances = Math.floor(max_buff_verts/instance_verts);
+    var buff_instances = Math.min(max_buff_instances, this.instances.length);
+    var verts = new Float32Array(buff_instances*instance_verts*3);
+    var normals = new Float32Array(buff_instances*instance_verts*3);
+    var uvs = new Float32Array(buff_instances*instance_verts*2);
+    var indeces = new Uint16Array(buff_instances*instance_indeces);
+    var mat4_tmp = new Float32Array(16);
+    var vec4_tmp = new Float32Array(4);
+    var mat3_tmp = new Float32Array(9);
+    var vec3_tmp = new Float32Array(3);
+
+    var total = 0;
+    var offset = 0;
+    for(var ins_pos of this.instances) {
+      if(offset == max_buff_instances) {
+        var model = new Model(verts,indeces,normals,uvs);
+        models.push(model);
+        total += offset;
+        offset = 0;
+        buff_instances = Math.min(max_buff_instances, this.instances.length - total);
+        verts = new Float32Array(buff_instances*instance_verts*3);
+        normals = new Float32Array(buff_instances*instance_verts*3);
+        uvs = new Float32Array(buff_instances*instance_verts*2);
+        indeces = new Uint16Array(buff_instances*instance_indeces);
+      }
+      var position_matrix = mat4.modelOp(ins_pos[1], ins_pos[0], mat4_tmp);
+      var position_matrix_3by3 = mat3_tmp; //use all same buffer
+      position_matrix_3by3[0] = position_matrix[0];
+      position_matrix_3by3[1] = position_matrix[1];
+      position_matrix_3by3[2] = position_matrix[2];
+      position_matrix_3by3[3] = position_matrix[4];
+      position_matrix_3by3[4] = position_matrix[5];
+      position_matrix_3by3[5] = position_matrix[6];
+      position_matrix_3by3[6] = position_matrix[8];
+      position_matrix_3by3[7] = position_matrix[9];
+      position_matrix_3by3[8] = position_matrix[10];
+      var normal_matrix = mat3.transpose(mat3.inverse(position_matrix_3by3,mat3_tmp),mat3_tmp);
+      for(var i = 0; i < obj.model.verts.length/3; i++) {
+        var vert = vec4_tmp;
+        vert[0] = obj.model.verts[i*3];
+        vert[1] = obj.model.verts[i*3+1];
+        vert[2] = obj.model.verts[i*3+2];
+        vert[3] = 1; //assumed always 1
+        var world_vert = mat4.multiplyVec(position_matrix, vert, vert)
+                         verts[offset*obj.model.verts.length + i*3] = world_vert[0];
+        verts[offset*obj.model.verts.length + i*3+1] = world_vert[1];
+        verts[offset*obj.model.verts.length + i*3+2] = world_vert[2];
+        var normal = vec3_tmp;
+        normal[0] = obj.model.normals[i*3];
+        normal[1] = obj.model.normals[i*3+1];
+        normal[2] = obj.model.normals[i*3+2];
+        var worlld_normal = mat3.multiplyVec(normal_matrix,normal, normal);
+        normals[offset*obj.model.verts.length + i*3] = worlld_normal[0];
+        normals[offset*obj.model.verts.length + i*3+1] = worlld_normal[1];
+        normals[offset*obj.model.verts.length + i*3+2] = worlld_normal[2];
+        uvs[offset*obj.model.uvs.length + i*2] = obj.model.uvs[i*2]
+            uvs[offset*obj.model.uvs.length + i*2+1] = obj.model.uvs[i*2+1];
+      }
+
+      for(var i = 0; i < obj.model.indeces.length; i++) {
+        indeces[offset*obj.model.indeces.length + i] = instance_verts*offset + obj.model.indeces[i];
+      }
+      offset++;
+    }
+    var model = new Model(verts,indeces,normals,uvs);
+    models.push(model);
+    data.addBakedInstances(this.position,this.rotation,this.obj_name,models);
+  }
+}
+
+
 export class Script {
   constructor(parent) {
     this.parent = parent; //Instance
     this.diff = null;
+    this.init = false;
   }
 
-  //time since script was last called.... must be set by caller in mainloop
-  timeDelta() {
-    return this.diff/1000; //make sure call returns same well step is running
-  }
-
-  initStart() { //TODO: these times are broken, but unused
+  initStart() { 
     this.start();
-    this.last_call = performance.now()
-
+    this.init = true;
   }
 
   initStep(timestamp) {
-    if(!this.init) {
-
+    if(this.init) {
+      this.step();
     }
-
-    var curr_call = performance.now();
-    this.diff = curr_call - this.last_call;
-    this.last_call = curr_call;
-    this.step();
   }
-
+  
   start() {
   }
 
@@ -97,9 +188,9 @@ export class Model {
     this.normal_buffer = null;
     this.uv_buffer = null;
   }
-
+  
+  //calculate normal per vert based on triangles around it
   calculateNormals() {
-    //calculate averge normal per vert based on triangles around it
     var normals = new Array(this.verts.length).fill(0);
     var normal_num = new Array(this.verts.length/3).fill(0); //number of triangles in each normal
     for(var i=0; i < this.indeces.length/3; i++) {
@@ -132,16 +223,15 @@ export class Model {
       normals[i*3+1] /= normal_num[i];
       normals[i*3+2] /= normal_num[i];
     }
-
     this.normals = normals;
   }
-
+  
+  //load webgl buffers
   loadMemory() {
     if(this.vert_buffer) {
       this.purgeMemory();
     }
     var glcontext = data.getGlobal("glcontext");
-
     var vert_buffer = null;
     if(this.verts) {
       vert_buffer = glcontext.createBuffer();
@@ -171,7 +261,8 @@ export class Model {
     this.normal_buffer = normal_buffer;
     this.uv_buffer  = uv_buffer;
   }
-
+  
+  //remove webgl buffers
   purgeMemory() {
     var glcontext = data.getGlobal("glcontext");
     if(this.vert_buffer) {
@@ -219,7 +310,7 @@ export class Texture {
   }
 }
 
-
+//stores instances in a level
 export class Level {
   constructor(objects) {
     this.objects = objects;
@@ -227,7 +318,7 @@ export class Level {
 
   start() {
     for(var i = 0; i < this.objects.length; i++) { //TODO: store position/rotation info level manifest
-      data.addInstance(new Float32Array(4), new Float32Array([0,0,0,1]), this.objects[i]); 
+      data.addInstance(new Float32Array(4), new Float32Array([0,0,0,1]), this.objects[i]);
     }
   }
 }
