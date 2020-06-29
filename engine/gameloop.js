@@ -20,7 +20,7 @@ rotation:
 var elapsed_time = 0;
 var ticks = 0;
 
-var lightpos = new Float32Array([64,50,64,1]);
+var lightpos = new Float32Array([64,100,64,1]);
 var lightcolor = new Float32Array([1,1,1]);
 
 //shared buffers, to reduce memory allocations
@@ -128,17 +128,12 @@ function setupPositionUniforms(instance,camera_matrix) {
 
 function mainloop(timestamp) {
   elapsed_time += (timestamp - last_frame);
-  ticks += 1;
-  if(elapsed_time >= 1000) {
-    console.log("FPS ", ticks);
-    ticks = 0;
-    elapsed_time -= 1000;
-  }
   
   data.resizeCanvas();
   var timedelta = (timestamp - last_frame)/1000; //in seconds
+  var tris = 0;
   last_frame = timestamp; //TODO: cleanup
-
+  
   glcontext.clearColor(1, 1, 1, 1);
   glcontext.clear(glcontext.COLOR_BUFFER_BIT | glcontext.DEPTH_BUFFER_BIT);
 
@@ -211,6 +206,7 @@ function mainloop(timestamp) {
           for(var model of instance.models) {
             setupAttributes(instance.material,model);
             var count = model.indeces.length;
+            tris += count;
             glcontext.drawElements(glcontext.TRIANGLES, count, glcontext.UNSIGNED_SHORT, 0);
           }
         }
@@ -230,6 +226,7 @@ function mainloop(timestamp) {
         instance.step();
         setupPositionUniforms(instance,camera_matrix);
         var count = model.indeces.length;
+        tris += count;
         glcontext.drawElements(glcontext.TRIANGLES, count, glcontext.UNSIGNED_SHORT, 0);
       }
       break;
@@ -242,6 +239,17 @@ function mainloop(timestamp) {
     default:
       console.assert(false, {name:object_name,object:object, errorMsg:"Object does not have valid RenderType value."});
     }
+  }
+
+  ticks += 1;
+  if(elapsed_time >= 1000) {
+    console.log("FPS ", ticks);
+    ticks = 0;
+    elapsed_time -= 1000;
+    var end_frame_time = performance.now();
+    var frame_time = end_frame_time - timestamp;
+    console.log("Frame Time", frame_time);
+    console.log("Triangles",tris/3);
   }
 
   if(run) requestAnimationFrame(mainloop);

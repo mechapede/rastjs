@@ -203,6 +203,7 @@ export class Model {
       var ac = vec3.sub(c,a,new Float32Array(3));
       var ab = vec3.sub(b,a,new Float32Array(3));
       var norm = vec3.cross(ab,ac,new Float32Array(3));
+      norm = vec3.normalize(norm,norm);
 
       normals[a_index*3] += norm[0];
       normals[a_index*3+1] += norm[1];
