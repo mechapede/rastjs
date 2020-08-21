@@ -77,7 +77,7 @@ export function bootstrap(canvas_name,asset_path) {
         });
         var shader = data.getShader(material_manifest["shader"]);
         var engine_attributes = {};
-        var attributes = {}; //TODO
+        var attributes = {};
         const numAttribs = glcontext.getProgramParameter(shader,glcontext.ACTIVE_ATTRIBUTES);
         
         for(let i = 0; i < numAttribs; ++i) {

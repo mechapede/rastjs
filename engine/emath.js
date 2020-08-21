@@ -58,12 +58,23 @@ export class vec3 {
     return dest;
   }
 
+  static magnitude(vec3a) {
+    return Math.sqrt(Math.pow(vec3a[0],2) + Math.pow(vec3a[1],2) + Math.pow(vec3a[2],2))
+  }
+
   static normalize(vec3a, dest) {
-    var length = Math.sqrt(Math.pow(vec3a[0],2) + Math.pow(vec3a[1],2) + Math.pow(vec3a[2],2));
+    var length = this.magnitude(vec3a);
     if(length == 0) length = 1;
     dest[0] = vec3a[0] / length;
     dest[1] = vec3a[1] / length;
     dest[2] = vec3a[2] / length;
+    return dest;
+  }
+  
+  static mulConstant(constant, vec3a, dest) {
+    dest[0] = constant * vec3a[0];
+    dest[1] = constant * vec3a[1];
+    dest[2] = constant * vec3a[2];
     return dest;
   }
 }

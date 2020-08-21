@@ -29,7 +29,7 @@ export function start(canvas){
     canvas.addEventListener("click", function() {
         canvas.requestPointerLock();
     });
-    //TODO: make movement one value inbetween frames of updating
+
     document.addEventListener("mousemove", function(event) {
         if ( mouse_locked ) {
             mouse_x += event.movementX;

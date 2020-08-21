@@ -16,26 +16,45 @@ var baked_instances = [];
 
 var instance_id = 0;
 
+export var timedelta = 0;
+export var lastframe = 0;
+export function setTimedelta(timestamp){
+  timedelta = (timestamp - lastframe)/1000; //in seconds
+  lastframe = timestamp;
+}
+
+
 //null returned on error, so default is false
 var globals = {"canvas":
                false,
                "glcontext":
                false,
-               "camera_pos": //TODO add more camera proerties here
-               null
               }
+
+export var camera = {
+position: new Float32Array([64,10,64]),
+rotation: new Float32Array(3), //TODO: could change to quaternions
+locked:   false //prevents WASD movement
+};
+
+export var fps = 0;
+export var tris = 0;
+export var frame_time = 0;
+export function setStats(new_fps,new_tris,new_frame_time){
+  fps = new_fps;
+  tris = new_tris;
+  frame_time = new_frame_time;
+}
 
 export function resizeCanvas() {
   var canvas = globals["canvas"];
+  var glcontext = globals["glcontext"];
   var cwidth = canvas.clientWidth;
   var cheight = canvas.clientHeight;
   if(canvas.width != cwidth || canvas.height != cheight) {
     canvas.width = cwidth;
     canvas.height = cheight;
-
-    console.log("Dimensions");
-    console.log(cwidth);
-    console.log(cheight);
+    glcontext.viewport(0, 0, glcontext.canvas.width, glcontext.canvas.height);
   }
 }
 

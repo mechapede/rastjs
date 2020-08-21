@@ -10,12 +10,7 @@ var run = false;
 var gameobject = null;
 var last_frame = null;
 
-var camera = {
-position:
-  new Float32Array([64,10,64]),
-rotation:
-  new Float32Array(3) //TODO: could change to quaternions
-};
+var camera = data.camera;
 
 var elapsed_time = 0;
 var ticks = 0;
@@ -74,10 +69,6 @@ function setupConstantUniforms(material,camera_matrix_inverse,timestamp,light_po
     var uni_inverse_offset = material.engine_uniforms["u_matrix_inverse"];
     glcontext.uniformMatrix4fv(uni_inverse_offset,false,camera_matrix_inverse);
   }
-  if("u_camera_pos" in material.engine_uniforms) { //should no longer be needed, deprecate
-    var uni_camera_pos = material.engine_uniforms["u_camera_pos"];
-    glcontext.uniform3fv(uni_camera_pos, camera.position);
-  }
   if("u_light_pos" in material.engine_uniforms) {
     var uni_light_pos = material.engine_uniforms["u_light_pos"];
     glcontext.uniform3fv(uni_light_pos, light_pos.slice(0,3));
@@ -130,39 +121,39 @@ function mainloop(timestamp) {
   elapsed_time += (timestamp - last_frame);
   
   data.resizeCanvas();
-  var timedelta = (timestamp - last_frame)/1000; //in seconds
+  data.setTimedelta(timestamp);
+  var timedelta = data.timedelta;
   var tris = 0;
-  last_frame = timestamp; //TODO: cleanup
-  
-  glcontext.clearColor(1, 1, 1, 1);
-  glcontext.clear(glcontext.COLOR_BUFFER_BIT | glcontext.DEPTH_BUFFER_BIT);
+  last_frame = timestamp;
 
   var forward = new Float32Array([-Math.cos(camera.rotation[0]) * Math.sin(camera.rotation[1]),Math.sin(camera.rotation[0]),Math.cos(camera.rotation[0]) * Math.cos(camera.rotation[1])]);
   forward = vec3.normalize(forward,forward);
-  if(get_key("w")) {
-    camera.position[0] += 10 * timedelta * forward[0];
-    camera.position[1] += 10 * timedelta * forward[1];
-    camera.position[2] += 10 * timedelta * forward[2];
-  } else if(get_key("s")) {
-    camera.position[0] -= 10 * timedelta * forward[0];
-    camera.position[1] -= 10 * timedelta * forward[1];
-    camera.position[2] -= 10 * timedelta * forward[2];
-  }
-  var right = vec3.cross(forward,[0,1,0],new Float32Array(3));
-  var right = vec3.normalize(right,right);
-  if(get_key("a")) {
-    camera.position[0] -= 10 * timedelta * right[0];
-    camera.position[1] -= 10 * timedelta * right[1];
-    camera.position[2] -= 10 * timedelta * right[2];
-  } else if(get_key("d")) {
-    camera.position[0] += 10 * timedelta * right[0];
-    camera.position[1] += 10 * timedelta * right[1];
-    camera.position[2] += 10 * timedelta * right[2];
-  }
-  if(get_key("q")) {
-    camera.position[1] += 10 * timedelta;
-  } else if(get_key("e")) {
-    camera.position[1] -= 10 * timedelta;
+  if(!camera.locked){
+    if(get_key("w")) {
+      camera.position[0] += 10 * timedelta * forward[0];
+      camera.position[1] += 10 * timedelta * forward[1];
+      camera.position[2] += 10 * timedelta * forward[2];
+    } else if(get_key("s")) {
+      camera.position[0] -= 10 * timedelta * forward[0];
+      camera.position[1] -= 10 * timedelta * forward[1];
+      camera.position[2] -= 10 * timedelta * forward[2];
+    }
+    var right = vec3.cross(forward,[0,1,0],new Float32Array(3));
+    var right = vec3.normalize(right,right);
+    if(get_key("a")) {
+      camera.position[0] -= 10 * timedelta * right[0];
+      camera.position[1] -= 10 * timedelta * right[1];
+      camera.position[2] -= 10 * timedelta * right[2];
+    } else if(get_key("d")) {
+      camera.position[0] += 10 * timedelta * right[0];
+      camera.position[1] += 10 * timedelta * right[1];
+      camera.position[2] += 10 * timedelta * right[2];
+    }
+    if(get_key("q")) {
+      camera.position[1] += 10 * timedelta;
+    } else if(get_key("e")) {
+      camera.position[1] -= 10 * timedelta;
+    }    
   }
 
   camera.rotation[0] -= get_mouse_y() / 720;
@@ -243,13 +234,11 @@ function mainloop(timestamp) {
 
   ticks += 1;
   if(elapsed_time >= 1000) {
-    console.log("FPS ", ticks);
-    ticks = 0;
-    elapsed_time -= 1000;
     var end_frame_time = performance.now();
     var frame_time = end_frame_time - timestamp;
-    console.log("Frame Time", frame_time);
-    console.log("Triangles",tris/3);
+    data.setStats(ticks, tris/3, frame_time);
+    ticks = 0;
+    elapsed_time -= 1000;
   }
 
   if(run) requestAnimationFrame(mainloop);

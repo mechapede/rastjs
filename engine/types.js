@@ -12,7 +12,7 @@ export class GameObject {
     this.layer = layer; //lowest drawn first
   }
 
-  createInstance(position,rotation, id) {
+  createInstance(position, rotation, id) {
     var models = null;
     if(this.model) models = [this.model];
     return new Instance(position, rotation, id, models, this.material,this.scripts);
@@ -49,13 +49,13 @@ export class Instance {
 
   start() {
     this.scripts.forEach(function(script) {
-      script.start();
+      script.initStart();
     });
   }
 
-  step(timestamp) {
+  step() {
     this.scripts.forEach(function(script) {
-      script.initStep(timestamp);
+      script.initStep();
     });
   }
 }
@@ -164,6 +164,7 @@ export class Script {
   }
 
   initStep(timestamp) {
+    console.assert(this.init, {name:this.parent, errorMsg:"Init step called before start!"});
     if(this.init) {
       this.step();
     }
