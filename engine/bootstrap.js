@@ -9,7 +9,7 @@ import * as data from "./data.js";
 
 export function bootstrap(canvas_name,asset_path) {
   var canvas = getCanvas("game_canvas");
-  var glcontext = getWebglContext(canvas);
+  var glcontext = getWebglContext(canvas, {alpha: false});
   data.setGlobal("canvas",canvas);
   data.setGlobal("glcontext",glcontext);  
   data.resizeCanvas();
